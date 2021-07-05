@@ -2,19 +2,19 @@ import express from "express";
 import cors from "cors";
 
 import initDb from "./config/database";
+import mainThread from "./mainThread";
+import formatDate from "./utils/formatDate";
+import router from "./config/routes";
+var bodyParser = require("body-parser");
 
 const app = express();
 
-import mainThread from "./mainThread";
-
 initDb();
 
+// parse application/json
+app.use(bodyParser.json());
+
 app.use(cors());
+app.use(router);
 
-app.get("/api", (req, res) => {
-  console.log("aqasdasdasdsa");
-  res.status(200);
-  res.json("Sucesso");
-});
-
-mainThread();
+app.listen(8000);
