@@ -1,12 +1,13 @@
 import mongoose, { Schema } from "mongoose";
 
 const ProductSchema = new Schema({
-  shopifyId: { type: String, required: true },
-  createdAt: { type: Date, required: true },
+  shopifyId: { type: Number, required: true },
+  storeId: { type: Schema.Types.ObjectId, ref: "Store" },
+  createdAt: { type: Date },
   createAtShopify: { type: Date, required: true },
   image: { type: String, required: false },
-  updatedAt: { type: Date, required: true },
-  firstUpdateAtShopify: { type: Date, required: true },
+  updatedAt: { type: Date },
+  firstRegisteredUpdateAtShopify: { type: Date, required: true },
   registeredUpdates: [Date],
 });
 
