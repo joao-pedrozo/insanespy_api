@@ -1,17 +1,29 @@
 import fetch from "node-fetch";
 
+import Store from "./models/store";
+import Product from "./models/product";
+import StoreController from "./controllers/StoreController";
+import { StoredStore } from "./interfaces/store";
+
 const mainThread = () => {
-  fetch("http://127.0.0.1:8000/store/add", {
-    method: "POST",
-    body: JSON.stringify({
-      test: "test",
-    }),
-    headers: {
-      "Content-type": "application/json; charset=UTF-8",
-    },
-  })
-    .then((response) => response.json())
-    .then((json) => console.log(json));
+  const storeController = new StoreController();
+
+  async function execute() {
+    const stores: [StoredStore] = await Store.find();
+
+    stores.forEach(async (store) => {
+      const fetchResponse = await fetch(store.url, {
+        method: "GET",
+      });
+
+      const { products } = await fetchResponse.json();
+      const storedProducts = await Product.find({ storeId: store._id });
+
+      storeController.addNewProducts(store, products, storedProducts);
+    });
+  }
+
+  execute();
 };
 
 export default mainThread;

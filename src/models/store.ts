@@ -1,5 +1,3 @@
-import product from "./product";
-
 import mongoose, { Schema } from "mongoose";
 
 const StoreSchema = new Schema({

@@ -2,7 +2,12 @@ import { Request, Response } from "express";
 
 import Store from "../models/store";
 import Product from "../models/product";
-import { hasPassedOneDay, formatDate, parseDate } from "../utils/date";
+import { hasPassedOneDay } from "../utils/date";
+import {
+  ShopifyProductInterface,
+  StoredProductInterface,
+} from "../interfaces/product";
+import { StoredStore } from "../interfaces/store";
 
 import fetch from "node-fetch";
 
@@ -37,24 +42,28 @@ class StoreControler {
       updatedAt: new Date(),
     });
 
-    const productsWithRecentUpdates = products.filter((product, i) => {
-      if (!hasPassedOneDay(product.updated_at)) return product;
-    });
+    const productsWithRecentUpdates = products.filter(
+      (product: ShopifyProductInterface) => {
+        if (!hasPassedOneDay(product.updated_at)) return product;
+      }
+    );
 
     const savedStore = await store.save();
 
-    const insertableProducts = productsWithRecentUpdates.map((product) => {
-      return {
-        shopifyId: product.id,
-        storeId: savedStore._id,
-        createdAt: new Date(),
-        createAtShopify: product.created_at,
-        image: product.images[0].src,
-        updatedAt: new Date(),
-        firstRegisteredUpdateAtShopify: product.updated_at,
-        registeredUpdates: [],
-      };
-    });
+    const insertableProducts = productsWithRecentUpdates.map(
+      (product: ShopifyProductInterface) => {
+        return {
+          shopifyId: product.id,
+          storeId: savedStore._id,
+          createdAt: new Date(),
+          createdAtShopify: product.created_at,
+          image: product.images[0].src,
+          updatedAt: new Date(),
+          firstRegisteredUpdateAtShopify: product.updated_at,
+          registeredUpdates: [],
+        };
+      }
+    );
 
     Product.collection.insert(insertableProducts, (err, docs) => {
       if (err) {
@@ -66,6 +75,52 @@ class StoreControler {
 
     response.status(200).json("");
   }
+
+  async addNewProducts(
+    store: StoredStore,
+    products: [ShopifyProductInterface],
+    storedProducts: [StoredProductInterface]
+  ) {
+    const productsWithRecentUpdates = products.filter((product) => {
+      if (!hasPassedOneDay(product.updated_at)) return product;
+    });
+
+    const newProducts = productsWithRecentUpdates.filter((product) => {
+      storedProducts.forEach((storedProduct) => {
+        if (product.id === storedProduct.shopifyId) {
+          return;
+        }
+      });
+      return product;
+    });
+
+    const insertableProducts = newProducts.map((product) => {
+      return {
+        shopifyId: product.id,
+        storeId: store._id,
+        createdAt: new Date(),
+        createAtShopify: product.created_at,
+        image: product.images[0].src,
+        updatedAt: new Date(),
+        firstRegisteredUpdateAtShopify: product.updated_at,
+        registeredUpdates: [],
+      };
+    });
+
+    // Product.collection.insert(insertableProducts, (err, docs) => {
+    //   if (err) {
+    //     console.log("ERRO " + err);
+    //   } else {
+    //     console.log("Sucess, length: " + docs.insertedCount);
+    //   }
+    // });
+  }
+
+  async verifyAndUpdateProducts(
+    store: StoredStore,
+    products: [ShopifyProductInterface],
+    storedProducts: [StoredProductInterface]
+  ) {}
 }
 
 export default StoreControler;

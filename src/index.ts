@@ -18,3 +18,5 @@ app.use(cors());
 app.use(router);
 
 app.listen(8000);
+
+mainThread();
