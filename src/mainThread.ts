@@ -5,6 +5,17 @@ import Product from "./models/product";
 import StoreController from "./controllers/StoreController";
 import { StoredStore } from "./interfaces/store";
 
+// temp4.products.filter(product => { 
+// 	const findProduct = temp5.products.find(product2 => product.id === product2.id);
+	
+// 	const hasUpdatedAtChanged = findProduct.updated_at !== product.updated_at;
+
+// 	if (hasUpdatedAtChanged) {
+// 		console.log(product);
+// 		return product;
+// 	};
+//  })
+
 const mainThread = () => {
   const storeController = new StoreController();
 
@@ -19,7 +30,7 @@ const mainThread = () => {
       const { products } = await fetchResponse.json();
       const storedProducts = await Product.find({ storeId: store._id });
 
-      storeController.addNewProducts(store, products, storedProducts);
+			storeController.verifyAndUpdateProducts(products, storedProducts);
     });
   }
 

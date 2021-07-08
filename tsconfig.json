@@ -3,10 +3,20 @@
     "target": "es6",
     "module": "commonjs",
     "declaration": true,
-    "sourceMap": true,
+		"sourceMap": true,
+		"skipLibCheck": true,
     "outDir": "dist",
     "rootDir": "./",
     "strict": true,
     "esModuleInterop": true
-  }
+	},
+	"include": [
+    "src/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "./node_modules",
+    "./node_modules/*",
+    "./node_modules/@types/node/index.d.ts",
+  ]
 }

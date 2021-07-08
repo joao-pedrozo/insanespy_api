@@ -25,7 +25,9 @@ interface StoredProductInterface {
   registeredUpdates: [Date];
   _id: Schema.Types.ObjectId;
   shopifyId: number;
-  createdAt: Date;
+	createdAt: Date;
+	updatedAt: Date;
+	firstRegisteredUpdateAtShopify: Date;
 }
 
 export { ShopifyProductInterface, StoredProductInterface };

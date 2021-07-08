@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 
 import Store from "../models/store";
 import Product from "../models/product";
-import { hasPassedOneDay } from "../utils/date";
+import { hasPassedOneDay, formatDate } from "../utils/date";
 import {
   ShopifyProductInterface,
   StoredProductInterface,
@@ -86,12 +86,15 @@ class StoreControler {
     });
 
     const newProducts = productsWithRecentUpdates.filter((product) => {
-      storedProducts.forEach((storedProduct) => {
-        if (product.id === storedProduct.shopifyId) {
-          return;
-        }
-      });
-      return product;
+      // storedProducts.forEach((storedProduct) => {
+      //   if (product.id === storedProduct.shopifyId) {
+      //     return;
+      //   }
+			// });
+			const productWithSameId = storedProducts.find(storedProduct => storedProduct.shopifyId === product.id);
+
+			if(!productWithSameId) return product;
+
     });
 
     const insertableProducts = newProducts.map((product) => {
@@ -117,10 +120,52 @@ class StoreControler {
   }
 
   async verifyAndUpdateProducts(
-    store: StoredStore,
     products: [ShopifyProductInterface],
     storedProducts: [StoredProductInterface]
-  ) {}
+  ) {
+		const productsWithRecentUpdates = products.filter((product) => {
+      if (!hasPassedOneDay(product.updated_at)) return product;
+		});
+		
+		storedProducts.forEach(async (storedProduct, i) => { 
+			const findProduct = productsWithRecentUpdates.find(async product => storedProduct.shopifyId === product.id);
+
+			if(!storedProduct.registeredUpdates.length) {
+				if(storedProduct.firstRegisteredUpdateAtShopify !== findProduct?.updated_at) {
+					await Product.findByIdAndUpdate(
+						storedProduct._id, 
+						{ $push: { registeredUpdates: findProduct?.updated_at } }, 
+						(error, success) => {
+							if(error) {
+								console.log('Error on updating product: ' + error.message);
+							} else {
+								console.log('Sucess on registering new update: '+ success);
+							}
+						}
+					);
+				}
+			} else {
+				const lastRegisteredUpdatedAt = storedProduct.registeredUpdates[storedProduct.registeredUpdates.length - 1];
+				const updatedAtHasChanged = formatDate(findProduct.updated_at) !== formatDate(lastRegisteredUpdatedAt);
+
+				console.log(updatedAtHasChanged);
+
+				if(updatedAtHasChanged) {
+					await Product.findByIdAndUpdate(
+						storedProduct._id, 
+						{ $push: { registeredUpdates: findProduct?.updated_at } }, 
+						(error, success) => {
+							if(error) {
+								console.log('Error on updating product: ' + error.message);
+							} else {
+								console.log('Sucess on registering new update: '+ success);
+							}
+						}
+					);
+				}
+			}
+		})
+	}
 }
 
 export default StoreControler;
