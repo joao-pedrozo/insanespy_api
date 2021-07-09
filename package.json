@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node index.ts",
-		"dev": "ts-node-dev --transpile-only --ignore-watch node_modules src/index.ts",
-		"typecheck": "tsc",
-		"typecheck:watch": "tsc -w",
+    "dev": "ts-node-dev --transpile-only --ignore-watch node_modules src/index.ts",
+    "typecheck": "tsc",
+    "typecheck:watch": "tsc -w",
     "build": "tsc"
   },
   "keywords": [],

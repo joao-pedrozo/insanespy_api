@@ -4,6 +4,7 @@ interface ShopifyProductInterface {
   body_html: string;
   handle: string;
   id: number;
+  title: string;
   images: [
     {
       id: number;
@@ -24,10 +25,11 @@ interface ShopifyProductInterface {
 interface StoredProductInterface {
   registeredUpdates: [Date];
   _id: Schema.Types.ObjectId;
+  title: string;
   shopifyId: number;
-	createdAt: Date;
-	updatedAt: Date;
-	firstRegisteredUpdateAtShopify: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  firstRegisteredUpdateAtShopify: Date;
 }
 
 export { ShopifyProductInterface, StoredProductInterface };

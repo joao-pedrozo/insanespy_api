@@ -5,9 +5,11 @@ import Product from "./models/product";
 import StoreController from "./controllers/StoreController";
 import { StoredStore } from "./interfaces/store";
 
-// temp4.products.filter(product => { 
+import { hasPassedOneDay, formatDate } from "./utils/date";
+
+// temp4.products.filter(product => {
 // 	const findProduct = temp5.products.find(product2 => product.id === product2.id);
-	
+
 // 	const hasUpdatedAtChanged = findProduct.updated_at !== product.updated_at;
 
 // 	if (hasUpdatedAtChanged) {
@@ -16,10 +18,10 @@ import { StoredStore } from "./interfaces/store";
 // 	};
 //  })
 
-const mainThread = () => {
-  const storeController = new StoreController();
+const mainThread = async () => {
+  const execute = async () => {
+    const storeController = new StoreController();
 
-  async function execute() {
     const stores: [StoredStore] = await Store.find();
 
     stores.forEach(async (store) => {
@@ -30,11 +32,20 @@ const mainThread = () => {
       const { products } = await fetchResponse.json();
       const storedProducts = await Product.find({ storeId: store._id });
 
-			storeController.verifyAndUpdateProducts(products, storedProducts);
-    });
-  }
+      const productsWithRecentUpdates = products.filter((product) => {
+        if (!hasPassedOneDay(product.updated_at)) return product;
+      });
 
-  execute();
+      await storeController.addNewProducts(store, products, storedProducts);
+
+      await storeController.verifyAndUpdateProducts(
+        productsWithRecentUpdates,
+        storedProducts
+      );
+    });
+  };
+
+  setInterval(execute, 10000);
 };
 
 export default mainThread;

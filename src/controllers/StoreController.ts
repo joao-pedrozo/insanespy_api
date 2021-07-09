@@ -57,6 +57,7 @@ class StoreControler {
           storeId: savedStore._id,
           createdAt: new Date(),
           createdAtShopify: product.created_at,
+          title: product.title,
           image: product.images[0].src,
           updatedAt: new Date(),
           firstRegisteredUpdateAtShopify: product.updated_at,
@@ -86,15 +87,11 @@ class StoreControler {
     });
 
     const newProducts = productsWithRecentUpdates.filter((product) => {
-      // storedProducts.forEach((storedProduct) => {
-      //   if (product.id === storedProduct.shopifyId) {
-      //     return;
-      //   }
-			// });
-			const productWithSameId = storedProducts.find(storedProduct => storedProduct.shopifyId === product.id);
+      const productWithSameId = storedProducts.find(
+        (storedProduct) => storedProduct.shopifyId === product.id
+      );
 
-			if(!productWithSameId) return product;
-
+      if (!productWithSameId) return product;
     });
 
     const insertableProducts = newProducts.map((product) => {
@@ -102,70 +99,107 @@ class StoreControler {
         shopifyId: product.id,
         storeId: store._id,
         createdAt: new Date(),
-        createAtShopify: product.created_at,
+        createdAtShopify: product.created_at,
         image: product.images[0].src,
+        title: product.title,
         updatedAt: new Date(),
         firstRegisteredUpdateAtShopify: product.updated_at,
         registeredUpdates: [],
       };
     });
 
-    // Product.collection.insert(insertableProducts, (err, docs) => {
-    //   if (err) {
-    //     console.log("ERRO " + err);
-    //   } else {
-    //     console.log("Sucess, length: " + docs.insertedCount);
-    //   }
-    // });
+    if (insertableProducts.length) {
+      Product.insertMany(insertableProducts, (err, docs) => {
+        if (err) {
+          console.log("Error on insert many " + err);
+        } else {
+          console.log("Sucess on insert many ", +docs);
+        }
+      });
+    }
   }
 
   async verifyAndUpdateProducts(
-    products: [ShopifyProductInterface],
+    productsWithRecentUpdates: [ShopifyProductInterface],
     storedProducts: [StoredProductInterface]
   ) {
-		const productsWithRecentUpdates = products.filter((product) => {
-      if (!hasPassedOneDay(product.updated_at)) return product;
-		});
-		
-		storedProducts.forEach(async (storedProduct, i) => { 
-			const findProduct = productsWithRecentUpdates.find(async product => storedProduct.shopifyId === product.id);
+    storedProducts.forEach(async (storedProduct) => {
+      const asd = productsWithRecentUpdates.find(
+        (product) => product.title === "Pizza Oodie"
+      );
 
-			if(!storedProduct.registeredUpdates.length) {
-				if(storedProduct.firstRegisteredUpdateAtShopify !== findProduct?.updated_at) {
-					await Product.findByIdAndUpdate(
-						storedProduct._id, 
-						{ $push: { registeredUpdates: findProduct?.updated_at } }, 
-						(error, success) => {
-							if(error) {
-								console.log('Error on updating product: ' + error.message);
-							} else {
-								console.log('Sucess on registering new update: '+ success);
-							}
-						}
-					);
-				}
-			} else {
-				const lastRegisteredUpdatedAt = storedProduct.registeredUpdates[storedProduct.registeredUpdates.length - 1];
-				const updatedAtHasChanged = formatDate(findProduct.updated_at) !== formatDate(lastRegisteredUpdatedAt);
+      const findFetchedProductWithSameShopifyId =
+        productsWithRecentUpdates.find(
+          (product) => product.id === storedProduct.shopifyId
+        );
 
-				console.log(updatedAtHasChanged);
+      if (findFetchedProductWithSameShopifyId) {
+        if (!storedProduct.registeredUpdates.length) {
+          if (
+            findFetchedProductWithSameShopifyId?.updated_at !==
+            storedProduct.firstRegisteredUpdateAtShopify
+          ) {
+            await Product.findByIdAndUpdate(
+              storedProduct._id,
+              {
+                $push: {
+                  registeredUpdates:
+                    findFetchedProductWithSameShopifyId?.updated_at,
+                },
+              },
+              (error, success) => {
+                if (error) {
+                  console.log("Error on updating product: " + error.message);
+                } else {
+                  console.log("Sucess on registering new update: " + success);
+                }
+              }
+            );
+          }
+        } else {
+          const hasRecentUpdates =
+            new Date(
+              findFetchedProductWithSameShopifyId?.updated_at
+            ).getTime() !==
+            new Date(
+              storedProduct.registeredUpdates[
+                storedProduct.registeredUpdates.length - 1
+              ]
+            ).getTime();
+          if (hasRecentUpdates) {
+            console.log("========");
+            console.log(
+              formatDate(findFetchedProductWithSameShopifyId?.updated_at)
+            );
+            console.log(
+              formatDate(
+                storedProduct.registeredUpdates[
+                  storedProduct.registeredUpdates.length - 1
+                ]
+              )
+            );
 
-				if(updatedAtHasChanged) {
-					await Product.findByIdAndUpdate(
-						storedProduct._id, 
-						{ $push: { registeredUpdates: findProduct?.updated_at } }, 
-						(error, success) => {
-							if(error) {
-								console.log('Error on updating product: ' + error.message);
-							} else {
-								console.log('Sucess on registering new update: '+ success);
-							}
-						}
-					);
-				}
-			}
-		})
-	}
+            await Product.findByIdAndUpdate(
+              storedProduct._id,
+              {
+                $push: {
+                  registeredUpdates:
+                    findFetchedProductWithSameShopifyId?.updated_at,
+                },
+              },
+              (error, success) => {
+                if (error) {
+                  console.log("Error on updating product: " + error.message);
+                } else {
+                  console.log(`Sucess on registering new update: ${success}`);
+                }
+              }
+            );
+          }
+        }
+      }
+    });
+  }
 }
 
 export default StoreControler;

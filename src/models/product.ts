@@ -6,6 +6,7 @@ const ProductSchema = new Schema({
   createdAt: { type: Date },
   createdAtShopify: { type: Date, required: true },
   image: { type: String, required: false },
+  title: { type: String, required: false },
   updatedAt: { type: Date },
   firstRegisteredUpdateAtShopify: { type: Date, required: true },
   registeredUpdates: [Date],
