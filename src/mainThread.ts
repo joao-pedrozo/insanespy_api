@@ -8,6 +8,8 @@ import { hasPassedOneDay } from "./utils/date";
 
 const mainThread = async () => {
   const execute = async () => {
+		console.log('Start verifying...')
+
     const storeController = new StoreController();
 
     const stores = await Store.find();

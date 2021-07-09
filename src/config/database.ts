@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import mainThread from "../mainThread";
 
 const initDB = () => {
   mongoose
@@ -9,7 +8,6 @@ const initDB = () => {
     )
     .then(() => {
       console.log("Aplicatação conectada ao banco de dados!");
-      mainThread();
     })
     .catch((error) => {
       console.log(`Erro ao conectar com o banco: ${error}`);

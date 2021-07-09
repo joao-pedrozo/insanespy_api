@@ -161,18 +161,6 @@ class StoreControler {
               ]
             ).getTime();
           if (hasRecentUpdates) {
-            console.log("========");
-            console.log(
-              formatDate(findFetchedProductWithSameShopifyId?.updated_at)
-            );
-            console.log(
-              formatDate(
-                storedProduct.registeredUpdates[
-                  storedProduct.registeredUpdates.length - 1
-                ]
-              )
-            );
-
             await Product.findByIdAndUpdate(
               storedProduct._id,
               {
@@ -181,14 +169,18 @@ class StoreControler {
                     findFetchedProductWithSameShopifyId?.updated_at,
                 },
               },
-              (error, success) => {
+              (error, doc) => {
                 if (error) {
                   console.log("Error on updating product: " + error.message);
                 } else {
-                  console.log(`Sucess on registering new update: ${success}`);
-                }
+									console.log('======')
+									console.log(`Sucess on registering new updates:`);
+									console.log(`Product title: ${doc.title}`);
+									console.log(`Last registered: ${doc.registeredUpdates[doc.registeredUpdates.length - 1]}`);
+								}
               }
-            );
+						);
+						return;
           }
         }
       }
