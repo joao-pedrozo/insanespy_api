@@ -26,12 +26,9 @@ class StoreControler {
       return;
     }
 
-    const fetchResponse = await fetch(
-      "https://theoodie.myshopify.com/products.json?limit=250",
-      {
-        method: "GET",
-      }
-    );
+    const fetchResponse = await fetch(url, {
+      method: "GET",
+    });
 
     const { products } = await fetchResponse.json();
 
@@ -109,6 +106,7 @@ class StoreControler {
     });
 
     if (insertableProducts.length) {
+      // @ts-ignore
       Product.insertMany(insertableProducts, (err, docs) => {
         if (err) {
           console.log("Error on insert many " + err);
@@ -124,10 +122,6 @@ class StoreControler {
     storedProducts: [StoredProductInterface]
   ) {
     storedProducts.forEach(async (storedProduct) => {
-      const asd = productsWithRecentUpdates.find(
-        (product) => product.title === "Pizza Oodie"
-      );
-
       const findFetchedProductWithSameShopifyId =
         productsWithRecentUpdates.find(
           (product) => product.id === storedProduct.shopifyId
@@ -199,6 +193,29 @@ class StoreControler {
         }
       }
     });
+  }
+
+  async findStores(request: Request, response: Response) {
+    const stores = await Store.find();
+
+    const asd = await Promise.all(
+      stores.map(async (store) => {
+        const storeProducts = await Product.find({ storeId: store._id });
+        const amountOfRegisteredUpdates = storeProducts.reduce(
+          (acc, product) => {
+            return acc + product.registeredUpdates.length;
+          },
+          0
+        );
+
+        return {
+          amountOfRegisteredUpdates,
+          ...store._doc,
+        };
+      })
+    );
+
+    response.status(200).json(asd);
   }
 }
 

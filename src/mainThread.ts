@@ -3,28 +3,17 @@ import fetch from "node-fetch";
 import Store from "./models/store";
 import Product from "./models/product";
 import StoreController from "./controllers/StoreController";
-import { StoredStore } from "./interfaces/store";
 
-import { hasPassedOneDay, formatDate } from "./utils/date";
-
-// temp4.products.filter(product => {
-// 	const findProduct = temp5.products.find(product2 => product.id === product2.id);
-
-// 	const hasUpdatedAtChanged = findProduct.updated_at !== product.updated_at;
-
-// 	if (hasUpdatedAtChanged) {
-// 		console.log(product);
-// 		return product;
-// 	};
-//  })
+import { hasPassedOneDay } from "./utils/date";
 
 const mainThread = async () => {
   const execute = async () => {
     const storeController = new StoreController();
 
-    const stores: [StoredStore] = await Store.find();
+    const stores = await Store.find();
 
     stores.forEach(async (store) => {
+      // @ts-ignore
       const fetchResponse = await fetch(store.url, {
         method: "GET",
       });
@@ -36,10 +25,13 @@ const mainThread = async () => {
         if (!hasPassedOneDay(product.updated_at)) return product;
       });
 
+      // @ts-ignore
       await storeController.addNewProducts(store, products, storedProducts);
 
+      // @ts-ignore
       await storeController.verifyAndUpdateProducts(
         productsWithRecentUpdates,
+        // @ts-ignore
         storedProducts
       );
     });
