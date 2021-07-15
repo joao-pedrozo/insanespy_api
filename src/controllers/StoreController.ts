@@ -26,52 +26,80 @@ class StoreControler {
       return;
     }
 
-    const fetchResponse = await fetch(url, {
-      method: "GET",
-    });
+    const findStoreWithSameName = await Store.findOne({ name });
 
-    const { products } = await fetchResponse.json();
+    if (findStoreWithSameName) {
+      response.status(400).json("A store with this name is already registered");
+      return;
+    }
 
-    const store = new Store({
-      name,
-      url,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    const findStoreWithSameUrl = await Store.findOne({ url });
 
-    const productsWithRecentUpdates = products.filter(
-      (product: ShopifyProductInterface) => {
-        if (!hasPassedOneDay(product.updated_at)) return product;
+    if (findStoreWithSameUrl) {
+      response.status(400).json("A store with this URL is already registered");
+      return;
+    }
+
+    try {
+      const fetchResponse = await fetch(url, {
+        method: "GET",
+      });
+
+      const { products } = await fetchResponse.json();
+
+      if (!products) {
+        response
+          .status(400)
+          .json(
+            "There is no products recently sold in this store or is a not valid URL"
+          );
+        return;
       }
-    );
 
-    const savedStore = await store.save();
+      const store = new Store({
+        name,
+        url,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
-    const insertableProducts = productsWithRecentUpdates.map(
-      (product: ShopifyProductInterface) => {
-        return {
-          shopifyId: product.id,
-          storeId: savedStore._id,
-          createdAt: new Date(),
-          createdAtShopify: product.created_at,
-          title: product.title,
-          image: product.images[0].src,
-          updatedAt: new Date(),
-          firstRegisteredUpdateAtShopify: product.updated_at,
-          registeredUpdates: [],
-        };
-      }
-    );
+      const productsWithRecentUpdates = products.filter(
+        (product: ShopifyProductInterface) => {
+          if (!hasPassedOneDay(product.updated_at)) return product;
+        }
+      );
 
-    Product.collection.insert(insertableProducts, (err, docs) => {
-      if (err) {
-        console.log("ERRO " + err);
-      } else {
-        console.log("Sucess, length: " + docs.insertedCount);
-      }
-    });
+      const savedStore = await store.save();
 
-    response.status(200).json("");
+      const insertableProducts = productsWithRecentUpdates.map(
+        (product: ShopifyProductInterface) => {
+          return {
+            shopifyId: product.id,
+            storeId: savedStore._id,
+            createdAt: new Date(),
+            createdAtShopify: product.created_at,
+            title: product.title,
+            image: product.images[0].src,
+            updatedAt: new Date(),
+            firstRegisteredUpdateAtShopify: product.updated_at,
+            registeredUpdates: [],
+          };
+        }
+      );
+
+      Product.collection.insert(insertableProducts, (err, docs) => {
+        if (err) {
+          console.log("ERRO " + err);
+        } else {
+          console.log("Sucess, length: " + docs.insertedCount);
+        }
+      });
+
+      response.status(200).json("Store added!");
+    } catch (err) {
+      console.log(err);
+      response.status(400).json("Something went wrong");
+    }
   }
 
   async addNewProducts(
@@ -173,14 +201,18 @@ class StoreControler {
                 if (error) {
                   console.log("Error on updating product: " + error.message);
                 } else {
-									console.log('======')
-									console.log(`Sucess on registering new updates:`);
-									console.log(`Product title: ${doc.title}`);
-									console.log(`Last registered: ${doc.registeredUpdates[doc.registeredUpdates.length - 1]}`);
-								}
+                  console.log("======");
+                  console.log(`Sucess on registering new updates:`);
+                  console.log(`Product title: ${doc.title}`);
+                  console.log(
+                    `Last registered: ${
+                      doc.registeredUpdates[doc.registeredUpdates.length - 1]
+                    }`
+                  );
+                }
               }
-						);
-						return;
+            );
+            return;
           }
         }
       }
@@ -201,13 +233,61 @@ class StoreControler {
         );
 
         return {
-          amountOfRegisteredUpdates,
           ...store._doc,
+          amountOfRegisteredUpdates,
+          formatedCreatedAt: formatDate(store._doc.createdAt),
         };
       })
     );
 
     response.status(200).json(asd);
+  }
+
+  async findOne(request: Request, response: Response) {
+    const id = request.params.id;
+    let store;
+
+    try {
+      store = await Store.findById({ _id: id });
+    } catch (err) {
+      console.log("Error on finding store " + err);
+      return response.status(400).json("Erro ao procurar por essa loja " + err);
+    }
+
+    if (!store) {
+      response.status(400).json("Nenhuma loja com esse ID foi encontrada");
+      return;
+    }
+
+    const storeProducts = await Product.find({ storeId: id });
+
+    return response.status(200).json({ store, products: storeProducts });
+  }
+
+  async delete(request: Request, response: Response) {
+    const id = request.params.id;
+    let store;
+
+    try {
+      store = await Store.findById({ _id: id });
+    } catch (err) {
+      console.log("Error on finding store " + err);
+      return response.status(400).json("Insira um ID válido. " + err);
+    }
+
+    if (!store) {
+      return response.status(400).json("Loja não encontrada");
+    }
+
+    Store.findOneAndRemove({ _id: id }, function (err, doc) {
+      Product.deleteMany({ storeId: id }, (err, result) => {
+        if (err) {
+          return response.status(400).json(err);
+        }
+
+        return response.status(200).json(result);
+      });
+    });
   }
 }
 
