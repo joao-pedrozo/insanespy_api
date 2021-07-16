@@ -139,7 +139,7 @@ class StoreControler {
         if (err) {
           console.log("Error on insert many " + err);
         } else {
-          console.log("Sucess on insert many ", +docs);
+          console.log("Sucess on insert many " + docs);
         }
       });
     }
@@ -158,8 +158,10 @@ class StoreControler {
       if (findFetchedProductWithSameShopifyId) {
         if (!storedProduct.registeredUpdates.length) {
           if (
-            findFetchedProductWithSameShopifyId?.updated_at !==
-            storedProduct.firstRegisteredUpdateAtShopify
+            new Date(
+              findFetchedProductWithSameShopifyId?.updated_at
+            ).getTime() !==
+            new Date(storedProduct.firstRegisteredUpdateAtShopify).getTime()
           ) {
             await Product.findByIdAndUpdate(
               storedProduct._id,
@@ -192,7 +194,7 @@ class StoreControler {
             await Product.findByIdAndUpdate(
               storedProduct._id,
               {
-                $push: {
+                $addToSet: {
                   registeredUpdates:
                     findFetchedProductWithSameShopifyId?.updated_at,
                 },
