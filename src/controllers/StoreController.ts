@@ -166,7 +166,7 @@ class StoreControler {
             await Product.findByIdAndUpdate(
               storedProduct._id,
               {
-                $push: {
+                $addToSet: {
                   registeredUpdates:
                     findFetchedProductWithSameShopifyId?.updated_at,
                 },

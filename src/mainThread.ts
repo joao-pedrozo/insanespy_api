@@ -7,6 +7,7 @@ import StoreController from "./controllers/StoreController";
 import { hasPassedOneDay } from "./utils/date";
 
 const mainThread = async () => {
+  console.log(process.env.TEST);
   const execute = async () => {
     console.log("Start verifying...");
     const storeController = new StoreController();

@@ -5,7 +5,9 @@ import initDb from "./config/database";
 import mainThread from "./mainThread";
 import { formatDate } from "./utils/date";
 import router from "./config/routes";
+
 var bodyParser = require("body-parser");
+require("dotenv").config();
 
 const app = express();
 
