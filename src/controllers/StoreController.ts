@@ -205,9 +205,11 @@ class StoreControler {
                 } else {
                   console.log("======");
                   console.log(`Sucess on registering new updates:`);
+                  // @ts-ignore
                   console.log(`Product title: ${doc.title}`);
                   console.log(
                     `Last registered: ${
+                      // @ts-ignore
                       doc.registeredUpdates[doc.registeredUpdates.length - 1]
                     }`
                   );
@@ -229,14 +231,17 @@ class StoreControler {
         const storeProducts = await Product.find({ storeId: store._id });
         const amountOfRegisteredUpdates = storeProducts.reduce(
           (acc, product) => {
+            // @ts-ignore
             return acc + product.registeredUpdates.length;
           },
           0
         );
 
         return {
+          // @ts-ignore
           ...store._doc,
           amountOfRegisteredUpdates,
+          // @ts-ignore
           formatedCreatedAt: formatDate(store._doc.createdAt),
         };
       })
@@ -281,7 +286,9 @@ class StoreControler {
       return response.status(400).json("Loja não encontrada");
     }
 
+    // @ts-ignore
     Store.findOneAndRemove({ _id: id }, function (err, doc) {
+      // @ts-ignore
       Product.deleteMany({ storeId: id }, (err, result) => {
         if (err) {
           return response.status(400).json(err);
