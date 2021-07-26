@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { Request, Response } from "express";
 import fetch from "node-fetch";
 
