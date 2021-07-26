@@ -1,15 +1,15 @@
 import { Request, Response } from "express";
+import fetch from "node-fetch";
 
 import Store from "../models/store";
 import Product from "../models/product";
 import { hasPassedOneDay, formatDate } from "../utils/date";
+import { extractHostname } from "../utils/url";
 import {
   ShopifyProductInterface,
   StoredProductInterface,
 } from "../interfaces/product";
 import { StoredStore } from "../interfaces/store";
-
-import fetch from "node-fetch";
 
 class StoreControler {
   async add(request: Request, response: Response) {
@@ -28,12 +28,14 @@ class StoreControler {
 
     const findStoreWithSameName = await Store.findOne({ name });
 
+    const sanitizedUrl = extractHostname(url);
+
     if (findStoreWithSameName) {
       response.status(400).json("A store with this name is already registered");
       return;
     }
 
-    const findStoreWithSameUrl = await Store.findOne({ url });
+    const findStoreWithSameUrl = await Store.findOne({ sanitizedUrl });
 
     if (findStoreWithSameUrl) {
       response.status(400).json("A store with this URL is already registered");
@@ -41,11 +43,9 @@ class StoreControler {
     }
 
     try {
-      const fetchResponse = await fetch(url, {
-        method: "GET",
-      });
-
-      const { products } = await fetchResponse.json();
+      const { products, pagesNumber } = await this.fetchForTheFirstTime(
+        sanitizedUrl
+      );
 
       if (!products) {
         response
@@ -58,9 +58,10 @@ class StoreControler {
 
       const store = new Store({
         name,
-        url,
+        sanitizedUrl,
         createdAt: new Date(),
         updatedAt: new Date(),
+        productPagesToFetch: pagesNumber,
       });
 
       const productsWithRecentUpdates = products.filter(
@@ -81,7 +82,6 @@ class StoreControler {
             title: product.title,
             image: product.images[0].src,
             updatedAt: new Date(),
-            firstRegisteredUpdateAtShopify: product.updated_at,
             registeredUpdates: [],
           };
         }
@@ -107,10 +107,12 @@ class StoreControler {
     products: [ShopifyProductInterface],
     storedProducts: [StoredProductInterface]
   ) {
+    // Filter all products getting only the ones with a update in the last 24h
     const productsWithRecentUpdates = products.filter((product) => {
       if (!hasPassedOneDay(product.updated_at)) return product;
     });
 
+    // Filter recent products to find the ones which are not registered in the database
     const newProducts = productsWithRecentUpdates.filter((product) => {
       const productWithSameId = storedProducts.find(
         (storedProduct) => storedProduct.shopifyId === product.id
@@ -125,23 +127,25 @@ class StoreControler {
         storeId: store._id,
         createdAt: new Date(),
         createdAtShopify: product.created_at,
-        image: product.images[0].src,
+        image: product.images[0]?.src,
         title: product.title,
+        lastUpdatedAt: product.updated_at,
+        totalSales: 1,
         updatedAt: new Date(),
-        firstRegisteredUpdateAtShopify: product.updated_at,
-        registeredUpdates: [],
       };
     });
 
     if (insertableProducts.length) {
       // @ts-ignore
-      Product.insertMany(insertableProducts, (err, docs) => {
+      await Product.insertMany(insertableProducts, (err, docs) => {
         if (err) {
           console.log("Error on insert many " + err);
         } else {
           console.log("Sucess on insert many " + docs);
         }
       });
+
+      return;
     }
   }
 
@@ -156,68 +160,33 @@ class StoreControler {
         );
 
       if (findFetchedProductWithSameShopifyId) {
-        if (!storedProduct.registeredUpdates.length) {
-          if (
-            new Date(
-              findFetchedProductWithSameShopifyId?.updated_at
-            ).getTime() !==
-            new Date(storedProduct.firstRegisteredUpdateAtShopify).getTime()
-          ) {
-            await Product.findByIdAndUpdate(
-              storedProduct._id,
-              {
-                $addToSet: {
-                  registeredUpdates:
-                    findFetchedProductWithSameShopifyId?.updated_at,
-                },
+        const hasRecentUpdates =
+          new Date(
+            findFetchedProductWithSameShopifyId?.updated_at
+          ).getTime() !== new Date(storedProduct.lastUpdatedAt).getTime();
+        if (hasRecentUpdates) {
+          await Product.findByIdAndUpdate(
+            storedProduct._id,
+            {
+              $inc: {
+                totalSales: 1,
               },
-              (error, success) => {
-                if (error) {
-                  console.log("Error on updating product: " + error.message);
-                } else {
-                  console.log("Sucess on registering new update: " + success);
-                }
-              }
-            );
-          }
-        } else {
-          const hasRecentUpdates =
-            new Date(
-              findFetchedProductWithSameShopifyId?.updated_at
-            ).getTime() !==
-            new Date(
-              storedProduct.registeredUpdates[
-                storedProduct.registeredUpdates.length - 1
-              ]
-            ).getTime();
-          if (hasRecentUpdates) {
-            await Product.findByIdAndUpdate(
-              storedProduct._id,
-              {
-                $addToSet: {
-                  registeredUpdates:
-                    findFetchedProductWithSameShopifyId?.updated_at,
-                },
+              $set: {
+                lastUpdatedAt: findFetchedProductWithSameShopifyId?.updated_at,
               },
-              (error, doc) => {
-                if (error) {
-                  console.log("Error on updating product: " + error.message);
-                } else {
-                  console.log("======");
-                  console.log(`Sucess on registering new updates:`);
-                  // @ts-ignore
-                  console.log(`Product title: ${doc.title}`);
-                  console.log(
-                    `Last registered: ${
-                      // @ts-ignore
-                      doc.registeredUpdates[doc.registeredUpdates.length - 1]
-                    }`
-                  );
-                }
+            },
+            (error, doc) => {
+              if (error) {
+                console.log("Error on updating product: " + error.message);
+              } else {
+                console.log("======");
+                console.log(`Sucess on registering new updates:`);
+                // @ts-ignore
+                console.log(`Product title: ${doc.title}`);
               }
-            );
-            return;
-          }
+            }
+          );
+          return;
         }
       }
     });
@@ -271,32 +240,91 @@ class StoreControler {
     return response.status(200).json({ store, products: storeProducts });
   }
 
+  async fetchAllStoresShopifyProducts() {
+    let products = [];
+
+    const stores = await Store.find();
+    const promises = stores.reduce((accumulator, store) => {
+      return [
+        ...accumulator,
+        ...Array.from(new Array(store.productPagesToFetch)).map(
+          async (_, index) => {
+            try {
+              const response = await fetch(
+                `${store.url}/products.json?limit=250&page=${index + 1}`
+              );
+
+              const { products: fetchedProducts } = await response.json();
+              if (fetchedProducts.length) {
+                const fetchedProductsWithStoreId = fetchedProducts.map(
+                  (product) => Object.assign(product, { storeId: store._id })
+                );
+                products = [...products, ...fetchedProductsWithStoreId];
+              }
+            } catch (err) {
+              console.log(`Error on fetching ${store.url}: ${err}`);
+            }
+          }
+        ),
+      ];
+    }, []);
+
+    await Promise.all(promises);
+    return products;
+  }
+
+  async fetchForTheFirstTime(url) {
+    let products = [];
+
+    await Promise.all(
+      Array.from(new Array(25)).map(async (_, index) => {
+        try {
+          const response = await fetch(
+            `${url}/products.json?limit=250&page=${index + 1}`
+          );
+
+          const { products: fetchedProducts } = await response.json();
+          products = [...products, ...fetchedProducts];
+        } catch (err) {
+          console.log(err);
+        }
+      })
+    );
+
+    return {
+      products,
+      pagesNumber: Number(String(products.length / 250).split(".")[0]) + 1,
+    };
+  }
+
   async delete(request: Request, response: Response) {
     const id = request.params.id;
-    let store;
+    const results = await this.fetchForTheFirstTime(
+      "https://www.aelfriceden.com"
+    );
 
-    try {
-      store = await Store.findById({ _id: id });
-    } catch (err) {
-      console.log("Error on finding store " + err);
-      return response.status(400).json("Insira um ID válido. " + err);
-    }
+    return response.status(200).json(results.pagesNumber);
+    //   let store;
 
-    if (!store) {
-      return response.status(400).json("Loja não encontrada");
-    }
-
-    // @ts-ignore
-    Store.findOneAndRemove({ _id: id }, function (err, doc) {
-      // @ts-ignore
-      Product.deleteMany({ storeId: id }, (err, result) => {
-        if (err) {
-          return response.status(400).json(err);
-        }
-
-        return response.status(200).json(result);
-      });
-    });
+    //   try {
+    //     store = await Store.findById({ _id: id });
+    //   } catch (err) {
+    //     console.log("Error on finding store " + err);
+    //     return response.status(400).json("Insira um ID válido. " + err);
+    //   }
+    //   if (!store) {
+    //     return response.status(400).json("Loja não encontrada");
+    //   }
+    //   // @ts-ignore
+    //   Store.findOneAndRemove({ _id: id }, function (err, doc) {
+    //     // @ts-ignore
+    //     Product.deleteMany({ storeId: id }, (err, result) => {
+    //       if (err) {
+    //         return response.status(400).json(err);
+    //       }
+    //       return response.status(200).json(result);
+    //     });
+    //   });
   }
 }
 

@@ -1,3 +1,6 @@
+const ONE_SECOND_IN_MILLISECONDS = 1000;
+const ONE_DAY_IN_MILLISECONDS = ONE_SECOND_IN_MILLISECONDS * 60 * 60 * 24;
+
 function parseDate(date: Date | string) {
   const usableDate = typeof date === "string" ? new Date(date) : date;
   return usableDate;
@@ -28,9 +31,19 @@ function formatDate(date: Date | string) {
 function hasPassedOneDay(date: Date) {
   const parsedDate = parseDate(date);
   const differenceBetweenDates =
-    new Date().getTime() - parsedDate.getTime() > 86400000;
+    new Date().getTime() - parsedDate.getTime() > ONE_DAY_IN_MILLISECONDS;
 
   return differenceBetweenDates;
 }
 
-export { formatDate, hasPassedOneDay, parseDate };
+function hasPassedXDays(date: Date, days: number) {
+  const parsedDate = parseDate(date);
+
+  const differenceBetweenDates =
+    new Date().getTime() - parsedDate.getTime() >
+    ONE_DAY_IN_MILLISECONDS * days;
+
+  return differenceBetweenDates;
+}
+
+export { formatDate, hasPassedOneDay, parseDate, hasPassedXDays };

@@ -8,8 +8,8 @@ const ProductSchema = new Schema({
   image: { type: String, required: false },
   title: { type: String, required: false },
   updatedAt: { type: Date },
-  firstRegisteredUpdateAtShopify: { type: Date, required: true },
-  registeredUpdates: [Date],
+  lastUpdatedAt: { type: Date, required: true },
+  totalSales: { type: Number },
 });
 
 export default mongoose.model("Product", ProductSchema);

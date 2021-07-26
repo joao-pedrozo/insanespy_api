@@ -5,6 +5,7 @@ const StoreSchema = new Schema({
   url: { type: String, required: true },
   createdAt: { type: Date, required: true },
   updatedAt: { type: Date, required: true },
+  productPagesToFetch: { type: Number, required: true },
 });
 
 export default mongoose.model("Store", StoreSchema);
