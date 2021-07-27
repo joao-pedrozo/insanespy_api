@@ -9,6 +9,7 @@ const ProductSchema = new Schema({
   title: { type: String, required: false },
   updatedAt: { type: Date },
   lastUpdatedAt: { type: Date, required: true },
+  shopifyHandle: { type: String, required: true },
   totalSales: { type: Number },
 });
 

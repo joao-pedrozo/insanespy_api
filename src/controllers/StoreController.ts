@@ -132,6 +132,7 @@ class StoreControler {
         image: product.images[0]?.src,
         title: product.title,
         lastUpdatedAt: product.updated_at,
+        shopifyHandle: product.handle,
         totalSales: 1,
         updatedAt: new Date(),
       };
@@ -197,28 +198,34 @@ class StoreControler {
   async findStores(request: Request, response: Response) {
     const stores = await Store.find();
 
-    const asd = await Promise.all(
+    const formatedStores = await Promise.all(
       stores.map(async (store) => {
         const storeProducts = await Product.find({ storeId: store._id });
-        const amountOfRegisteredUpdates = storeProducts.reduce(
-          (acc, product) => {
-            // @ts-ignore
-            return acc + product.registeredUpdates.length;
-          },
-          0
-        );
+
+        const lastSale = storeProducts.reduce((accumulator, product) => {
+          if (new Date(product.lastUpdatedAt).getTime() > accumulator) {
+            return product.lastUpdatedAt;
+          } else {
+            return accumulator;
+          }
+        }, 0);
+
+        const totalSales = storeProducts.reduce((accumulator, product) => {
+          return accumulator + product.totalSales;
+        }, 0);
 
         return {
           // @ts-ignore
           ...store._doc,
-          amountOfRegisteredUpdates,
+          lastSale,
+          totalSales: totalSales,
           // @ts-ignore
           formatedCreatedAt: formatDate(store._doc.createdAt),
         };
       })
     );
 
-    response.status(200).json(asd);
+    response.status(200).json(formatedStores);
   }
 
   async findOne(request: Request, response: Response) {
@@ -300,33 +307,27 @@ class StoreControler {
   }
 
   async delete(request: Request, response: Response) {
-    const id = request.params.id;
-    const results = await this.fetchForTheFirstTime(
-      "https://www.aelfriceden.com"
-    );
+    let store;
 
-    return response.status(200).json(results.pagesNumber);
-    //   let store;
-
-    //   try {
-    //     store = await Store.findById({ _id: id });
-    //   } catch (err) {
-    //     console.log("Error on finding store " + err);
-    //     return response.status(400).json("Insira um ID válido. " + err);
-    //   }
-    //   if (!store) {
-    //     return response.status(400).json("Loja não encontrada");
-    //   }
-    //   // @ts-ignore
-    //   Store.findOneAndRemove({ _id: id }, function (err, doc) {
-    //     // @ts-ignore
-    //     Product.deleteMany({ storeId: id }, (err, result) => {
-    //       if (err) {
-    //         return response.status(400).json(err);
-    //       }
-    //       return response.status(200).json(result);
-    //     });
-    //   });
+    try {
+      store = await Store.findById({ _id: id });
+    } catch (err) {
+      console.log("Error on finding store " + err);
+      return response.status(400).json("Insira um ID válido. " + err);
+    }
+    if (!store) {
+      return response.status(400).json("Loja não encontrada");
+    }
+    // @ts-ignore
+    Store.findOneAndRemove({ _id: id }, function (err, doc) {
+      // @ts-ignore
+      Product.deleteMany({ storeId: id }, (err, result) => {
+        if (err) {
+          return response.status(400).json(err);
+        }
+        return response.status(200).json(result);
+      });
+    });
   }
 }
 
