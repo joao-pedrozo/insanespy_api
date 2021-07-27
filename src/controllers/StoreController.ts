@@ -6,7 +6,6 @@ import fetch from "node-fetch";
 import Store from "../models/store";
 import Product from "../models/product";
 import { hasPassedOneDay, formatDate } from "../utils/date";
-import { extractHostname } from "../utils/url";
 import {
   ShopifyProductInterface,
   StoredProductInterface,
@@ -30,7 +29,12 @@ class StoreControler {
 
     const findStoreWithSameName = await Store.findOne({ name });
 
-    const sanitizedUrl = extractHostname(url);
+    let sanitizedUrl;
+    if (url.includes("//")) {
+      sanitizedUrl = `https://${url.split("/")[2]}`;
+    } else {
+      sanitizedUrl = `https://${url.split("/")[0]}`;
+    }
 
     if (findStoreWithSameName) {
       response.status(400).json("A store with this name is already registered");
@@ -60,7 +64,7 @@ class StoreControler {
 
       const store = new Store({
         name,
-        sanitizedUrl,
+        url: sanitizedUrl,
         createdAt: new Date(),
         updatedAt: new Date(),
         productPagesToFetch: pagesNumber,
@@ -218,7 +222,7 @@ class StoreControler {
           // @ts-ignore
           ...store._doc,
           lastSale,
-          totalSales: totalSales,
+          totalSales,
           // @ts-ignore
           formatedCreatedAt: formatDate(store._doc.createdAt),
         };
