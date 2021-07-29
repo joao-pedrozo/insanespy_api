@@ -172,7 +172,7 @@ class StoreControler {
             findFetchedProductWithSameShopifyId?.updated_at
           ).getTime() !== new Date(storedProduct.lastUpdatedAt).getTime();
         if (hasRecentUpdates) {
-          await Product.findByIdAndUpdate(
+          Product.findByIdAndUpdate(
             storedProduct._id,
             {
               $inc: {
@@ -193,7 +193,6 @@ class StoreControler {
               }
             }
           );
-          return;
         }
       }
     });
