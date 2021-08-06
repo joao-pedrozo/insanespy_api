@@ -200,11 +200,13 @@ class StoreControler {
 
   async findStores(request: Request, response: Response) {
     const stores = await Store.find();
+    const allProducts = await Product.find();
 
     const formatedStores = await Promise.all(
       stores.map(async (store) => {
-        const storeProducts = await Product.find({ storeId: store._id });
-
+        const storeProducts = allProducts.filter(
+          (product) => product.storeId === store._id
+        );
         const lastSale = storeProducts.reduce((accumulator, product) => {
           if (new Date(product.lastUpdatedAt).getTime() > accumulator) {
             return product.lastUpdatedAt;
