@@ -313,6 +313,7 @@ class StoreControler {
 
   async delete(request: Request, response: Response) {
     let store;
+    const id = request.params.id;
 
     try {
       store = await Store.findById({ _id: id });
