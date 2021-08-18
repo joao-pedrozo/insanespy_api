@@ -48,7 +48,7 @@ const mainThread = async () => {
     );
   };
 
-  setInterval(execute, 20000);
+  setInterval(execute, 60000);
 };
 
 export default mainThread;
